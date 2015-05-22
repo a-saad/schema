@@ -73,7 +73,24 @@ class Use(object):
             raise SchemaError('%s(%r) raised %r' % (f, data, x), self._error)
 
 
-COMPARABLE, CALLABLE, VALIDATOR, TYPE, DICT, ITERABLE = range(6)
+class Ensure(object):
+
+    def __init__(self, key_in_parent, value, **kw):
+        self._key_in_parent = key_in_parent
+        self._value = value
+        assert list(kw) in (['error'], [])
+        self._error = kw.get('error')
+
+    def __repr__(self):
+        return '%s(%s,%s)' % (self.__class__.__name__,
+                              self._key_in_parent,
+                              repr(self._value))
+
+    def validate_with_parent_access(self, data, parent):
+        return Schema(self._value, error=self._error).validate(parent[self._key_in_parent])
+
+
+COMPARABLE, CALLABLE, VALIDATOR, VALIDATOR_WITH_PARENT_ACCESS, TYPE, DICT, ITERABLE = range(7)
 
 
 def priority(s):
@@ -84,6 +101,8 @@ def priority(s):
         return DICT
     if issubclass(type(s), type):
         return TYPE
+    if hasattr(s, 'validate_with_parent_access'):
+        return VALIDATOR_WITH_PARENT_ACCESS
     if hasattr(s, 'validate'):
         return VALIDATOR
     if callable(s):
@@ -94,9 +113,10 @@ def priority(s):
 
 class Schema(object):
 
-    def __init__(self, schema, error=None):
+    def __init__(self, schema, error=None, parent_data=None):
         self._schema = schema
         self._error = error
+        self._parent_data = parent_data
 
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._schema)
@@ -127,7 +147,7 @@ class Schema(object):
                         pass
                     else:
                         try:
-                            nvalue = Schema(svalue, error=e).validate(value)
+                            nvalue = Schema(svalue, error=e, parent_data=data).validate(value)
                         except SchemaError as _x:
                             x = _x
                             raise
@@ -163,9 +183,11 @@ class Schema(object):
                 return data
             else:
                 raise SchemaError('%r should be instance of %r' % (data, s), e)
-        if flavor == VALIDATOR:
+        if flavor == VALIDATOR or flavor == VALIDATOR_WITH_PARENT_ACCESS:
             try:
-                return s.validate(data)
+                return (s.validate(data)
+                        if flavor == VALIDATOR
+                        else s.validate_with_parent_access(data, self._parent_data))
             except SchemaError as x:
                 raise SchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
