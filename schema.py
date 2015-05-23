@@ -63,9 +63,12 @@ class Use(object):
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._callable)
 
-    def validate(self, data):
+    def validate_with_parent_access(self, data, parent):
         try:
-            return self._callable(data)
+            if 'schema_enable_parent_access' in self._callable.__dict__:
+                return self._callable(data, parent)
+            else:
+                return self._callable(data)
         except SchemaError as x:
             raise SchemaError([None] + x.autos, [self._error] + x.errors)
         except BaseException as x:
@@ -89,6 +92,10 @@ class Ensure(object):
     def validate_with_parent_access(self, data, parent):
         return Schema(self._value, error=self._error).validate(parent[self._key_in_parent])
 
+def enable_parent_access(callable):
+    """ Marks callables that should be given access to parent data """
+    callable.schema_enable_parent_access = True
+    return callable
 
 COMPARABLE, CALLABLE, VALIDATOR, VALIDATOR_WITH_PARENT_ACCESS, TYPE, DICT, ITERABLE = range(7)
 
