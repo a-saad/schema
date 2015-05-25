@@ -92,6 +92,22 @@ class Ensure(object):
     def validate_with_parent_access(self, data, parent):
         return Schema(self._value, error=self._error).validate(parent[self._key_in_parent])
 
+class EnsureExists(object):
+
+    def __init__(self, key_in_parent, **kw):
+        self._key_in_parent = key_in_parent
+        assert list(kw) in (['error'], [])
+        self._error = kw.get('error')
+
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, self._key_in_parent)
+
+    def validate_with_parent_access(self, data, parent):
+        if self._key_in_parent in parent:
+            return data
+        else:
+            raise SchemaError("%s: key doesnt exist in parent: %s" % (data, self._key_in_parent), self._error)
+
 def enable_parent_access(callable):
     """ Marks callables that should be given access to parent data """
     callable.schema_enable_parent_access = True
