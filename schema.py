@@ -34,17 +34,17 @@ class And(object):
         return '%s(%s)' % (self.__class__.__name__,
                            ', '.join(repr(a) for a in self._args))
 
-    def validate(self, data):
-        for s in [Schema(s, error=self._error) for s in self._args]:
+    def validate_with_parent_access(self, data, parent):
+        for s in [Schema(s, error=self._error, parent_data=parent) for s in self._args]:
             data = s.validate(data)
         return data
 
 
 class Or(And):
 
-    def validate(self, data):
+    def validate_with_parent_access(self, data, parent):
         x = SchemaError([], [])
-        for s in [Schema(s, error=self._error) for s in self._args]:
+        for s in [Schema(s, error=self._error, parent_data=parent) for s in self._args]:
             try:
                 return s.validate(data)
             except SchemaError as _x:
@@ -90,7 +90,7 @@ class Ensure(object):
                               repr(self._value))
 
     def validate_with_parent_access(self, data, parent):
-        return Schema(self._value, error=self._error).validate(parent[self._key_in_parent])
+        return Schema(self._value, error=self._error, parent_data=parent).validate(parent[self._key_in_parent])
 
 class EnsureExists(object):
 
