@@ -150,7 +150,7 @@ class Schema(object):
         flavor = priority(s)
         if flavor == ITERABLE:
             data = Schema(type(s), error=e).validate(data)
-            return type(s)(Or(*s, error=e).validate(d) for d in data)
+            return type(s)(Or(*s, error=e).validate_with_parent_access(d, self._parent_data) for d in data)
         if flavor == DICT:
             data = Schema(dict, error=e).validate(data)
             new = type(data)()  # new - is a dict of the validated values
