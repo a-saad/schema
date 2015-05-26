@@ -108,6 +108,14 @@ class EnsureExists(object):
         else:
             raise SchemaError("key doesnt exist in parent: %s" % self._key_in_parent, self._error)
 
+class EnsureNotExists(EnsureExists):
+
+    def validate_with_parent_access(self, data, parent):
+        if self._key_in_parent not in parent:
+            return data
+        else:
+            raise SchemaError("key exists in parent: %s" % self._key_in_parent, self._error)
+
 def enable_parent_access(callable):
     """ Marks callables that should be given access to parent data """
     callable.schema_enable_parent_access = True
