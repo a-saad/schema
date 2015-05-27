@@ -173,7 +173,7 @@ class Schema(object):
                 for skey in sorted_skeys:
                     svalue = s[skey]
                     try:
-                        nkey = Schema(skey, error=e).validate(key)
+                        nkey = Schema(skey, error=e, parent_data=data).validate(key)
                     except SchemaError:
                         pass
                     else:
@@ -201,6 +201,11 @@ class Schema(object):
                 s_wrong_keys = ', '.join('%r' % (k,) for k in sorted(wrong_keys))
                 raise SchemaError('wrong keys %s in %r' % (s_wrong_keys, data),
                                   e)
+
+            # Check for when conditions in optional keys
+            for skey in sorted_skeys:
+                if type(skey) is Optional and hasattr(skey, 'when'):
+                    Schema(skey.when, error=e, parent_data=data).validate(True)
 
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if type(k) is Optional and
@@ -250,7 +255,9 @@ class Optional(Schema):
 
     def __init__(self, *args, **kwargs):
         default = kwargs.pop('default', MARKER)
+        when = kwargs.pop('when', MARKER)
         super(Optional, self).__init__(*args, **kwargs)
+
         if default is not MARKER:
             # See if I can come up with a static key to use for myself:
             if priority(self._schema) != COMPARABLE:
@@ -260,3 +267,6 @@ class Optional(Schema):
                         '"%r" is too complex.' % (self._schema,))
             self.default = default
             self.key = self._schema
+
+        if when is not MARKER:
+            self.when = when
