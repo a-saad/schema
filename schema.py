@@ -204,7 +204,7 @@ class Schema(object):
 
             # Check for when conditions in optional keys
             for skey in sorted_skeys:
-                if type(skey) is Optional and hasattr(skey, 'when'):
+                if type(skey) is Optional and hasattr(skey, 'when') and skey._schema not in data:
                     Schema(skey.when, error=e, parent_data=data).validate(True)
 
             # Apply default-having optionals that haven't been used:
@@ -266,7 +266,8 @@ class Optional(Schema):
                         'predictable values, like literal strings or ints. '
                         '"%r" is too complex.' % (self._schema,))
             self.default = default
-            self.key = self._schema
+
+        self.key = self._schema
 
         if when is not MARKER:
             self.when = when
