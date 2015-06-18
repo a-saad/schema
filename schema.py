@@ -232,7 +232,10 @@ class Schema(object):
         if flavor == CALLABLE:
             f = s.__name__
             try:
-                if s(data):
+                if hasattr(s, '__dict__') and 'schema_enable_parent_access' in s.__dict__:
+                    if s(data, self._parent_data):
+                        return data
+                elif s(data):
                     return data
             except SchemaError as x:
                 raise SchemaError([None] + x.autos, [e] + x.errors)
